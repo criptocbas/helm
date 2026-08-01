@@ -35,6 +35,10 @@ import { useAcpBridge } from "./hooks/useAcpBridge";
 import { useBoardPersistence } from "./hooks/useBoardPersistence";
 import { VoiceHudStrip } from "./components/VoiceBar";
 import { SessionTabs, sessionsFromNodes } from "./components/SessionTabs";
+import {
+  NeedsYouStrip,
+  needsYouFromNodes,
+} from "./components/NeedsYouStrip";
 import { TuiMaximizeOverlay } from "./components/TuiMaximizeOverlay";
 import { HelmUiProvider } from "./lib/helmUi";
 import { useVoice } from "./voice/useVoice";
@@ -116,6 +120,8 @@ export default function App() {
   const selectedLabel = selected?.data.label ?? "";
 
   const sessionTabs = useMemo(() => sessionsFromNodes(nodes), [nodes]);
+  const needsYouItems = useMemo(() => needsYouFromNodes(nodes), [nodes]);
+  const firstRun = nodes.length === 0;
 
   const maximizedSession = useMemo(() => {
     if (!maximizedNodeId) return null;
@@ -749,7 +755,11 @@ export default function App() {
       },
       {
         id: "perms",
-        label: `Permission mode: ${permissionMode} (toggle)`,
+        label:
+          permissionMode === "auto"
+            ? "Permission: auto / always-approve (toggle → ask)"
+            : "Permission: ask / safe (toggle → auto dogfood)",
+        hint: "default is ask",
         run: () => togglePermissionMode(),
       },
       {
@@ -828,6 +838,7 @@ export default function App() {
           permissionMode={permissionMode}
           voiceEnabled={voiceEnabled}
           voiceHud={voiceHud}
+          firstRun={firstRun}
           onConnect={() => void connect()}
           onDisconnect={() => void disconnect()}
           onPickProject={() => void pickProject()}
@@ -838,6 +849,12 @@ export default function App() {
           onToggleVoice={toggleVoice}
           onMicDown={() => startListening()}
           onMicUp={() => void stopListening()}
+        />
+
+        <NeedsYouStrip
+          items={needsYouItems}
+          selectedId={selectedId}
+          onFocus={focusSession}
         />
 
         <SessionTabs
@@ -893,7 +910,10 @@ export default function App() {
               }}
               empty={nodes.length === 0}
               connected={connected}
+              projectCwd={projectCwd}
+              connecting={connecting}
               onConnectClick={() => void connect()}
+              onPickProject={() => void pickProject()}
               onSpawnClick={() => void spawnAgent()}
               onPaletteClick={() => setPaletteOpen(true)}
             />

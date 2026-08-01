@@ -11,8 +11,9 @@ export type HelmPrefs = {
 
 const KEY = "grok-helm.prefs.v1";
 
+/** Safe default: ask mode. Auto / always-approve is opt-in for dogfood. */
 const DEFAULTS: HelmPrefs = {
-  permissionMode: "auto",
+  permissionMode: "ask",
   voiceEnabled: false,
   ttsCallouts: false,
   mcpEnabled: false,

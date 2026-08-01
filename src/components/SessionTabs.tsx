@@ -106,7 +106,7 @@ export function SessionTabs({
                   }
                 }}
               >
-                {isMax ? "🗗" : "⛶"}
+                {isMax ? "Restore" : "Max"}
               </button>
             ) : null}
           </div>
@@ -114,7 +114,7 @@ export function SessionTabs({
       })}
       <div className="flex-1" />
       <span className="text-[10px] text-[var(--text-faint)] mono px-2 shrink-0 hidden sm:inline">
-        click tab to connect · ⛶ maximize TUI
+        click tab to focus · Max expands TUI
       </span>
     </div>
   );

@@ -26,10 +26,23 @@ type Props = {
   onNodeDoubleClick: (node: HelmNode) => void;
   empty: boolean;
   connected: boolean;
+  projectCwd: string;
+  connecting?: boolean;
   onConnectClick: () => void;
+  onPickProject: () => void;
   onSpawnClick: () => void;
   onPaletteClick: () => void;
 };
+
+/**
+ * First-run guided steps when the board is empty.
+ * 1 Connect → 2 Pick project (if empty) → 3 Spawn first TUI.
+ */
+function firstRunStep(connected: boolean, projectCwd: string): 1 | 2 | 3 {
+  if (!connected) return 1;
+  if (!projectCwd.trim()) return 2;
+  return 3;
+}
 
 export function BoardCanvas({
   nodes,
@@ -43,10 +56,15 @@ export function BoardCanvas({
   onNodeDoubleClick,
   empty,
   connected,
+  projectCwd,
+  connecting,
   onConnectClick,
+  onPickProject,
   onSpawnClick,
   onPaletteClick,
 }: Props) {
+  const step = firstRunStep(connected, projectCwd);
+
   return (
     <div className="flex-1 min-w-0 relative">
       <ReactFlow
@@ -94,32 +112,60 @@ export function BoardCanvas({
             <h1 className="text-xl font-bold tracking-tight m-0 mb-2">
               Take the helm
             </h1>
-            <p className="text-[13px] text-[var(--text-muted)] m-0 mb-5 leading-relaxed">
-              Connect to Grok, spawn agents onto the infinite board, and conduct
-              the fleet. Subagents appear as child nodes. Boards autosave.
+            <p className="text-[13px] text-[var(--text-muted)] m-0 mb-4 leading-relaxed">
+              Three steps to your first agent on the board. Voice and permission
+              tools unlock after you spawn.
             </p>
+
+            <ol className="first-run-steps text-left m-0 mb-5 pl-0 list-none">
+              <li className={step === 1 ? "active" : step > 1 ? "done" : ""}>
+                <span className="step-n">1</span>
+                <span>Connect to Grok</span>
+              </li>
+              <li className={step === 2 ? "active" : step > 2 ? "done" : ""}>
+                <span className="step-n">2</span>
+                <span>Pick project folder</span>
+              </li>
+              <li className={step === 3 ? "active" : ""}>
+                <span className="step-n">3</span>
+                <span>Spawn first TUI agent</span>
+              </li>
+            </ol>
+
             <div className="flex gap-2 justify-center flex-wrap">
-              {!connected ? (
+              {step === 1 ? (
                 <button
                   type="button"
                   onClick={onConnectClick}
+                  disabled={!!connecting}
+                  className="px-4 py-2 rounded-[var(--radius)] bg-[var(--accent)] text-[var(--accent-fg)] text-[13px] font-semibold disabled:opacity-50"
+                >
+                  {connecting ? "Connecting…" : "1 · Connect to Grok"}
+                </button>
+              ) : null}
+              {step === 2 ? (
+                <button
+                  type="button"
+                  onClick={onPickProject}
                   className="px-4 py-2 rounded-[var(--radius)] bg-[var(--accent)] text-[var(--accent-fg)] text-[13px] font-semibold"
                 >
-                  Connect
+                  2 · Pick project folder
                 </button>
-              ) : (
+              ) : null}
+              {step === 3 ? (
                 <button
                   type="button"
                   onClick={onSpawnClick}
                   className="px-4 py-2 rounded-[var(--radius)] bg-[var(--accent)] text-[var(--accent-fg)] text-[13px] font-semibold"
                 >
-                  Spawn first agent
+                  3 · Spawn first agent
                 </button>
-              )}
+              ) : null}
               <button
                 type="button"
                 onClick={onPaletteClick}
-                className="px-4 py-2 rounded-[var(--radius)] border border-[var(--border)] text-[13px] text-[var(--text-muted)]"
+                className="px-4 py-2 rounded-[var(--radius)] border border-[var(--border)] text-[13px] text-[var(--text-faint)]"
+                title="Advanced commands (Ctrl+K)"
               >
                 Commands
               </button>

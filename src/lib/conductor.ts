@@ -91,7 +91,8 @@ export function grokTuiCommand(
   opts?: { alwaysApprove?: boolean; initialPrompt?: string },
 ): string[] {
   const cmd = ["grok", "--cwd", cwd];
-  if (opts?.alwaysApprove !== false) {
+  // Safe default: no --always-approve unless explicitly auto/dogfood
+  if (opts?.alwaysApprove === true) {
     cmd.push("--always-approve");
   }
   // Prefer fullscreen-capable session inside embedded xterm

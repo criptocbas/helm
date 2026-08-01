@@ -223,10 +223,222 @@ body,
   cursor: pointer;
 }
 
+.tui-chrome-btn--text {
+  width: auto;
+  min-width: 44px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .tui-chrome-btn:hover {
   background: var(--bg-hover);
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+/* TUI zoom-out HUD — scannable fleet face */
+.agent-tui-hud {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-panel) 88%, var(--bg-elevated));
+  flex-shrink: 0;
+}
+
+.tui-live-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+.tui-live-badge.state-working {
+  border-color: color-mix(in srgb, var(--tool) 50%, var(--border));
+  color: var(--tool);
+}
+
+.tui-live-badge.state-needs_input,
+.tui-live-badge.state-needs_attention {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+  color: var(--warning);
+  animation: helm-pulse 1.4s ease-in-out infinite;
+}
+
+.tui-live-badge.state-failed {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  color: var(--danger);
+}
+
+.agent-tui-card[data-state="working"] {
+  box-shadow:
+    0 0 0 1px var(--ring-working),
+    0 0 20px color-mix(in srgb, var(--tool) 22%, transparent),
+    0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.agent-tui-card[data-state="needs_input"],
+.agent-tui-card[data-state="needs_attention"] {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+  animation: helm-pulse 1.4s ease-in-out infinite;
+}
+
+.agent-tui-card[data-state="failed"] {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+
+/* Needs-you attention strip */
+.needs-you-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.needs-you-strip--alert {
+  background: color-mix(in srgb, var(--warning) 8%, var(--bg-panel));
+  border-bottom-color: color-mix(in srgb, var(--warning) 30%, var(--border));
+}
+
+.needs-you-label {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 0 4px;
+}
+
+.needs-you-label--pulse {
+  color: var(--warning);
+  animation: helm-pulse 1.4s ease-in-out infinite;
+}
+
+.needs-you-empty {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.needs-you-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.needs-you-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border));
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.needs-you-chip:hover,
+.needs-you-chip.active {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--text);
+}
+
+.needs-you-chip.state-failed {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+.needs-you-chip-state {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warning);
+}
+
+.needs-you-chip.state-failed .needs-you-chip-state {
+  color: var(--danger);
+}
+
+.needs-you-chip-label {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* First-run empty board steps */
+.first-run-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.first-run-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-faint);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.first-run-steps li.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.first-run-steps li.done {
+  color: var(--success);
+}
+
+.first-run-steps .step-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.first-run-steps li.active .step-n {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.first-run-steps li.done .step-n {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+  color: var(--success);
 }
 
 /* Session tab strip */
@@ -288,14 +500,18 @@ body,
 
 .session-tab-max {
   flex-shrink: 0;
-  width: 26px;
+  min-width: 40px;
   height: 100%;
+  padding: 0 6px;
   border: 0;
   border-left: 1px solid var(--border);
   background: transparent;
   color: var(--text-faint);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .session-tab-max:hover {

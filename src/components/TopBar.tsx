@@ -15,6 +15,8 @@ type Props = {
   permissionMode: PermissionMode;
   voiceEnabled: boolean;
   voiceHud: VoiceHud;
+  /** De-emphasize voice / advanced perms until fleet has agents */
+  firstRun: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onPickProject: () => void;
@@ -39,6 +41,7 @@ export function TopBar({
   permissionMode,
   voiceEnabled,
   voiceHud,
+  firstRun,
   onConnect,
   onDisconnect,
   onPickProject,
@@ -50,6 +53,15 @@ export function TopBar({
   onMicDown,
   onMicUp,
 }: Props) {
+  const permsLabel =
+    permissionMode === "auto"
+      ? "perms: auto (always-approve)"
+      : "perms: ask (safe)";
+  const permsTitle =
+    permissionMode === "auto"
+      ? "Dogfood mode: agents auto-approve tool permissions (--always-approve). Click to switch to ask."
+      : "Safe default: agents request approval. Click to opt into auto / always-approve (dogfood only).";
+
   return (
     <header className="flex items-center gap-3 px-4 h-12 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
       <div className="flex items-center gap-2 mr-1">
@@ -103,14 +115,16 @@ export function TopBar({
         + Spawn agent
       </button>
 
-      <button
-        type="button"
-        onClick={onSpawnTerminal}
-        disabled={!projectCwd}
-        className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] text-[12px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-40"
-      >
-        + Terminal
-      </button>
+      {!firstRun ? (
+        <button
+          type="button"
+          onClick={onSpawnTerminal}
+          disabled={!projectCwd}
+          className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] text-[12px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-40"
+        >
+          + Terminal
+        </button>
+      ) : null}
 
       <button
         type="button"
@@ -121,22 +135,37 @@ export function TopBar({
         Ctrl+K
       </button>
 
-      <button
-        type="button"
-        onClick={onTogglePermissionMode}
-        className="px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] text-[11px] text-[var(--text-faint)] hover:bg-[var(--bg-hover)]"
-        title="Permission mode for agent tools"
-      >
-        perms: {permissionMode}
-      </button>
+      {!firstRun ? (
+        <>
+          <button
+            type="button"
+            onClick={onTogglePermissionMode}
+            className={`px-2 py-1 rounded-[var(--radius-sm)] border text-[11px] hover:bg-[var(--bg-hover)] ${
+              permissionMode === "auto"
+                ? "border-[var(--warning)] text-[var(--warning)]"
+                : "border-[var(--border)] text-[var(--text-faint)]"
+            }`}
+            title={permsTitle}
+          >
+            {permsLabel}
+          </button>
 
-      <VoiceBar
-        enabled={voiceEnabled}
-        hud={voiceHud}
-        onToggleEnabled={onToggleVoice}
-        onMicDown={onMicDown}
-        onMicUp={onMicUp}
-      />
+          <VoiceBar
+            enabled={voiceEnabled}
+            hud={voiceHud}
+            onToggleEnabled={onToggleVoice}
+            onMicDown={onMicDown}
+            onMicUp={onMicUp}
+          />
+        </>
+      ) : (
+        <span
+          className="text-[10px] text-[var(--text-faint)] hidden md:inline"
+          title="Voice and permission mode unlock after you spawn an agent"
+        >
+          Spawn an agent to unlock voice · perms
+        </span>
+      )}
 
       <div className="flex-1" />
 

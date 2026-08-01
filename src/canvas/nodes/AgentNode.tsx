@@ -36,6 +36,17 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
   const isMaximized = maximizedNodeId === id;
 
   if (isTui) {
+    const liveBadge =
+      agent.state === "working"
+        ? "Live"
+        : agent.state === "needs_input" || agent.state === "needs_attention"
+          ? stateLabel(agent.state)
+          : agent.state === "failed"
+            ? "Failed"
+            : agent.state === "disconnected"
+              ? "Offline"
+              : "TUI";
+
     return (
       <div
         className={`agent-tui-card ${selected ? "selected" : ""} ${
@@ -55,35 +66,40 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
           position={Position.Top}
           className="!bg-[var(--accent)] !w-2 !h-2 !border-0"
         />
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border)] nodrag">
+        {/* Zoom-out HUD — always scannable fleet face */}
+        <div className="agent-tui-hud nodrag">
           <span className={`status-dot ${agent.state}`} />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-[13px] truncate tracking-tight">
-              {agent.label}
-            </div>
-            <div className="text-[9px] uppercase tracking-wider text-[var(--text-faint)]">
-              Grok Build TUI
-              <span className="mono normal-case ml-2 opacity-70">
-                {agent.shellKey?.slice(0, 10)}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-semibold text-[13px] truncate tracking-tight">
+                {agent.label}
               </span>
+              <span className={`tui-live-badge state-${agent.state}`}>
+                {liveBadge}
+              </span>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] truncate leading-snug mt-0.5">
+              {agent.lastLine?.trim()
+                ? agent.lastLine
+                : "Live Grok TUI — click body to type, or inject below"}
             </div>
           </div>
           <button
             type="button"
-            className="tui-chrome-btn"
-            title={isMaximized ? "Restore" : "Maximize TUI"}
+            className="tui-chrome-btn tui-chrome-btn--text"
+            title={isMaximized ? "Restore (Esc)" : "Maximize TUI"}
             onClick={(e) => {
               e.stopPropagation();
               if (isMaximized) minimizeNode();
               else maximizeNode(id);
             }}
           >
-            {isMaximized ? "🗗" : "⛶"}
+            {isMaximized ? "Restore" : "Max"}
           </button>
         </div>
         {isMaximized ? (
           <div className="h-[340px] flex items-center justify-center text-[12px] text-[var(--text-muted)] px-4 text-center">
-            Maximized — use the full-window view (or ⛶ / Esc to restore)
+            Maximized — full-window view (Restore or Esc)
           </div>
         ) : (
           <div className="agent-tui-body">
