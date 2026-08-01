@@ -1,0 +1,517 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+/* Helm — dark stage. Signal amber attention. Navy void canvas. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #07090f;
+  --bg-elevated: #0d111a;
+  --bg-panel: #121826;
+  --bg-hover: color-mix(in srgb, #ffffff 5%, transparent);
+  --bg-active: color-mix(in srgb, var(--accent) 14%, transparent);
+
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text: #e6eaf2;
+  --text-muted: #8b93a7;
+  --text-faint: #5c6478;
+
+  /* Helm signal — amber on deep navy */
+  --accent: #f0b429;
+  --accent-dim: #c4921a;
+  --accent-fg: #1a1406;
+
+  --success: #3ecf8e;
+  --warning: #f0b429;
+  --danger: #f2556e;
+  --thought: #8b9cf7;
+  --tool: #3db8c5;
+
+  --ring-working: color-mix(in srgb, var(--tool) 70%, transparent);
+  --ring-needs: var(--warning);
+  --ring-failed: var(--danger);
+  --ring-idle: rgba(255, 255, 255, 0.12);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* React Flow stage */
+.helm-flow {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(240, 180, 41, 0.04), transparent 60%),
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-size: 100% 100%, 24px 24px;
+  background-color: var(--bg);
+}
+
+.helm-flow .react-flow__minimap {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.helm-flow .react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.helm-flow .react-flow__controls-button {
+  background: var(--bg-panel) !important;
+  border-bottom: 1px solid var(--border) !important;
+  fill: var(--text-muted) !important;
+}
+
+.helm-flow .react-flow__controls-button:hover {
+  background: var(--bg-hover) !important;
+}
+
+/* Agent card status rings */
+.agent-card {
+  width: 280px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agent-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.agent-card[data-state="working"] {
+  box-shadow:
+    0 0 0 1px var(--ring-working),
+    0 0 24px color-mix(in srgb, var(--tool) 25%, transparent),
+    0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.agent-card[data-state="needs_input"],
+.agent-card[data-state="needs_attention"] {
+  border-color: color-mix(in srgb, var(--warning) 50%, var(--border));
+  animation: helm-pulse 1.4s ease-in-out infinite;
+}
+
+.agent-card[data-state="failed"] {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+}
+
+.agent-card.missing {
+  opacity: 0.72;
+  border-style: dashed;
+}
+
+/* Subagent cards — smaller satellite nodes */
+.subagent-card {
+  width: 200px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-panel) 90%, var(--thought));
+  border: 1px solid color-mix(in srgb, var(--thought) 25%, var(--border));
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subagent-card.selected {
+  border-color: color-mix(in srgb, var(--thought) 60%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--thought) 40%, transparent),
+    0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.subagent-card[data-state="working"] {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--thought) 50%, transparent),
+    0 0 18px color-mix(in srgb, var(--thought) 22%, transparent);
+}
+
+.subagent-card[data-state="failed"] {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+
+.subagent-card[data-state="completed"] {
+  opacity: 0.88;
+}
+
+.helm-flow .react-flow__edge-path {
+  stroke-width: 1.5;
+}
+
+.helm-flow .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent);
+}
+
+/* Full Grok Build TUI agent cards */
+.agent-tui-card {
+  width: 100%;
+  height: 100%;
+  min-width: 480px;
+  min-height: 280px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-tui-card.selected {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 14px 48px rgba(0, 0, 0, 0.55);
+}
+
+.agent-tui-body {
+  flex: 1;
+  min-height: 200px;
+  height: 100%;
+}
+
+.agent-tui-card .xterm {
+  height: 100%;
+}
+
+.agent-tui-card .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.tui-chrome-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tui-chrome-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+/* Session tab strip */
+.session-tabs {
+  scrollbar-width: thin;
+}
+
+.session-tab {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  max-width: 200px;
+  flex-shrink: 0;
+}
+
+.session-tab.active {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+}
+
+.session-tab-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.session-tab.active .session-tab-main {
+  color: var(--text);
+}
+
+.session-tab-kind {
+  font-size: 9px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.session-tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-tab-max {
+  flex-shrink: 0;
+  width: 26px;
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.session-tab-max:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+/* Full-window TUI overlay */
+.tui-maximize-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.tui-maximize-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.tui-maximize-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tui-maximize-body .xterm {
+  height: 100%;
+}
+
+.maximized-placeholder {
+  opacity: 0.72;
+}
+
+/* Terminal cards — wider shell surface */
+.terminal-card {
+  width: 420px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--tool) 30%, var(--border));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.terminal-card.selected {
+  border-color: color-mix(in srgb, var(--tool) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tool) 35%, transparent),
+    0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.terminal-card .xterm {
+  height: 100%;
+}
+
+.terminal-card .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+/* Voice */
+.mic-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+
+.mic-btn:hover:not(.disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mic-btn.listening {
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  background: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 0 20px color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: helm-pulse 1.2s ease-in-out infinite;
+}
+
+.mic-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voice-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(640px, 90%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.voice-hud-hot {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.voice-hud-err {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+}
+
+.voice-hud-idle {
+  opacity: 0.9;
+}
+
+.voice-hud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.voice-hud-dot[data-listening="true"] {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.voice-hud-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.voice-hud-text {
+  font-size: 12px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-hud-hint {
+  font-size: 10px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+/* Focused agent while listening */
+.agent-card.voice-target {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 28px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+
+@keyframes helm-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--warning) 40%, transparent),
+      0 0 12px color-mix(in srgb, var(--warning) 20%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent),
+      0 0 28px color-mix(in srgb, var(--warning) 35%, transparent);
+  }
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.idle {
+  background: var(--text-faint);
+}
+.status-dot.working {
+  background: var(--tool);
+  box-shadow: 0 0 8px var(--tool);
+}
+.status-dot.needs_input,
+.status-dot.needs_attention {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+}
+.status-dot.completed {
+  background: var(--success);
+}
+.status-dot.failed,
+.status-dot.disconnected {
+  background: var(--danger);
+}
