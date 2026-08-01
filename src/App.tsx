@@ -39,8 +39,11 @@ import {
   NeedsYouStrip,
   needsYouFromNodes,
 } from "./components/NeedsYouStrip";
+import { PermissionCard } from "./components/PermissionCard";
+import { PlanApprovalCard } from "./components/PlanApprovalCard";
 import { TuiMaximizeOverlay } from "./components/TuiMaximizeOverlay";
 import { HelmUiProvider } from "./lib/helmUi";
+import type { PendingPermission, PendingPlan } from "./lib/approvals";
 import { useVoice } from "./voice/useVoice";
 import type {
   AgentInfo,
@@ -83,6 +86,10 @@ export default function App() {
     () => loadPrefs().voiceEnabled,
   );
   const [maximizedNodeId, setMaximizedNodeId] = useState<string | null>(null);
+  const [pendingPermission, setPendingPermission] =
+    useState<PendingPermission | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
 
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const streamBufs = useRef(createStreamBufferMap());
@@ -229,6 +236,8 @@ export default function App() {
     nodesRef,
     permissionModeRef,
     streamBufs,
+    setPendingPermission,
+    setPendingPlan,
   });
 
   const { persistBoard, loadBoard, newBoard } = useBoardPersistence({
@@ -526,15 +535,12 @@ export default function App() {
     await sendPromptToAgent(selectedConductor, text);
   }, [prompt, selectedConductor, sendPromptToAgent]);
 
-  const focusAgentByName = useCallback(
-    (name: string): boolean => {
-      const agent = findByLabel(nodesRef.current, name);
-      if (!agent) return false;
-      setSelectedId(agent.nodeId);
-      return true;
-    },
-    [],
-  );
+  const focusAgentByName = useCallback((name: string): boolean => {
+    const agent = findByLabel(nodesRef.current, name);
+    if (!agent) return false;
+    focusSession(agent.nodeId);
+    return true;
+  }, [focusSession]);
 
   const tellAgentByName = useCallback(
     async (name: string, message: string): Promise<boolean> => {
@@ -542,11 +548,11 @@ export default function App() {
       if (!agent) return false;
       if (agent.mode === "tui" && !agent.shellKey) return false;
       if (agent.mode === "acp" && !agent.sessionId) return false;
-      setSelectedId(agent.nodeId);
+      focusSession(agent.nodeId);
       await sendPromptToAgent(agent, message);
       return true;
     },
-    [sendPromptToAgent],
+    [sendPromptToAgent, focusSession],
   );
 
   const stopSelected = useCallback(async () => {
@@ -613,6 +619,93 @@ export default function App() {
     }
   }, [setNodes]);
 
+  const respondPermission = useCallback(
+    async (optionId: string | null) => {
+      if (!pendingPermission) return;
+      setApprovalBusy(true);
+      try {
+        await invoke("permission_respond", {
+          requestId: pendingPermission.requestId,
+          optionId,
+        });
+        setPendingPermission(null);
+        if (pendingPermission.sessionId) {
+          // clear needs_input if we still own that session
+          setNodes((prev) =>
+            prev.map((n) =>
+              n.type === "agent" &&
+              isAgentData(n.data) &&
+              n.data.sessionId === pendingPermission.sessionId
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      state: "working",
+                      lastLine: optionId
+                        ? "Permission granted"
+                        : "Permission denied",
+                    },
+                  }
+                : n,
+            ),
+          );
+        }
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setApprovalBusy(false);
+      }
+    },
+    [pendingPermission, setNodes],
+  );
+
+  const respondPlan = useCallback(
+    async (outcome: "approved" | "cancelled") => {
+      if (!pendingPlan) return;
+      setApprovalBusy(true);
+      try {
+        await invoke("plan_approval_respond", {
+          requestId: pendingPlan.requestId,
+          outcome,
+          feedback: null,
+        });
+        setPendingPlan(null);
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.type === "agent" &&
+            isAgentData(n.data) &&
+            n.data.sessionId === pendingPlan.sessionId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    state: outcome === "approved" ? "working" : "idle",
+                    lastLine:
+                      outcome === "approved"
+                        ? "Plan approved"
+                        : "Plan cancelled",
+                  },
+                }
+              : n,
+          ),
+        );
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setApprovalBusy(false);
+      }
+    },
+    [pendingPlan, setNodes],
+  );
+
+  const pendingAgentLabel = useMemo(() => {
+    const sid = pendingPermission?.sessionId || pendingPlan?.sessionId;
+    if (!sid) return undefined;
+    return listAgents(nodes).find((a) => a.sessionId === sid)?.label;
+  }, [pendingPermission, pendingPlan, nodes]);
+
+  const agentCount = useMemo(() => listAgents(nodes).length, [nodes]);
+
   const { hud: voiceHud, startListening, stopListening } = useVoice(
     {
       onSpawn: (label) => spawnAgent(label),
@@ -631,7 +724,7 @@ export default function App() {
           setError("Select or spawn an agent before voice prompts.");
           return;
         }
-        setSelectedId(agent.nodeId);
+        focusSession(agent.nodeId);
         await sendPromptToAgent(agent, text);
       },
       onInterim: (text) => setPrompt(text),
@@ -860,6 +953,8 @@ export default function App() {
           permissionMode={permissionMode}
           voiceEnabled={voiceEnabled}
           voiceHud={voiceHud}
+          voiceTargetLabel={selectedAgent?.label ?? null}
+          agentCount={agentCount}
           firstRun={firstRun}
           onConnect={() => void connect()}
           onDisconnect={() => void disconnect()}
@@ -901,6 +996,31 @@ export default function App() {
           </div>
         ) : null}
 
+        {pendingPermission || pendingPlan ? (
+          <div className="approval-dock shrink-0 border-b border-[var(--border)] px-3 py-2 bg-[var(--bg-panel)] flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+            {pendingPermission ? (
+              <PermissionCard
+                pending={pendingPermission}
+                agentLabel={pendingAgentLabel}
+                busy={approvalBusy}
+                onAllow={(id) => void respondPermission(id)}
+                onDeny={(id) => void respondPermission(id)}
+                onDismiss={() => setPendingPermission(null)}
+              />
+            ) : null}
+            {pendingPlan ? (
+              <PlanApprovalCard
+                pending={pendingPlan}
+                agentLabel={pendingAgentLabel}
+                busy={approvalBusy}
+                onApprove={() => void respondPlan("approved")}
+                onCancel={() => void respondPlan("cancelled")}
+                onDismiss={() => setPendingPlan(null)}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex flex-1 min-h-0">
           <div className="flex-1 min-w-0 relative flex">
             <BoardCanvas
@@ -939,7 +1059,11 @@ export default function App() {
               onSpawnClick={() => void spawnAgent()}
               onPaletteClick={() => setPaletteOpen(true)}
             />
-            <VoiceHudStrip hud={voiceHud} voiceEnabled={voiceEnabled} />
+            <VoiceHudStrip
+              hud={voiceHud}
+              voiceEnabled={voiceEnabled}
+              targetLabel={selectedAgent?.label ?? null}
+            />
           </div>
 
           <TranscriptDock

@@ -5,31 +5,38 @@
  */
 
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { PermissionOption } from "./approvals";
+
+/** Host `acp://permission` — see docs/research/SPRINT2_HOST.md */
+export type PermissionEventPayload = {
+  requestId: number;
+  sessionId: string | null;
+  options: PermissionOption[];
+  /** Raw ACP toolCall when present */
+  toolCall?: unknown;
+  toolTitle?: string | null;
+  toolKind?: string | null;
+  /** One-line path/command/title for PermissionCard (host-derived) */
+  toolSummary?: string | null;
+  raw?: unknown;
+};
+
+/** Host `acp://plan-approval` — see docs/research/SPRINT2_HOST.md */
+export type PlanApprovalEventPayload = {
+  requestId: number;
+  sessionId: string;
+  toolCallId?: string | null;
+  /** Full plan markdown when agent sent it */
+  planContent?: string | null;
+  /** Truncated preview for dock cards (~2k) */
+  planExcerpt?: string | null;
+};
 
 export type AcpListenerHandlers = {
   onStatus: (payload: { running?: boolean }) => void;
   onSessionUpdate: (payload: unknown) => void;
-  onPermission: (payload: {
-    requestId: number;
-    sessionId: string | null;
-    /** Raw ACP toolCall when present */
-    toolCall?: unknown;
-    toolTitle?: string | null;
-    toolKind?: string | null;
-    /** One-line UI summary (path / command / title) */
-    toolSummary?: string | null;
-    options: { optionId: string; kind: string; name?: string }[];
-    raw?: unknown;
-  }) => void;
-  onPlanApproval: (payload: {
-    requestId: number;
-    sessionId: string;
-    toolCallId?: string | null;
-    /** Full plan markdown when provided */
-    planContent?: string | null;
-    /** Truncated preview for PermissionCard / dock (~2k) */
-    planExcerpt?: string | null;
-  }) => void;
+  onPermission: (payload: PermissionEventPayload) => void;
+  onPlanApproval: (payload: PlanApprovalEventPayload) => void;
 };
 
 let handlers: AcpListenerHandlers | null = null;
@@ -63,27 +70,12 @@ async function ensureStarted() {
       }),
     );
     unsubs.push(
-      await listen<{
-        requestId: number;
-        sessionId: string | null;
-        toolCall?: unknown;
-        toolTitle?: string | null;
-        toolKind?: string | null;
-        toolSummary?: string | null;
-        options: { optionId: string; kind: string; name?: string }[];
-        raw?: unknown;
-      }>("acp://permission", (ev) => {
+      await listen<PermissionEventPayload>("acp://permission", (ev) => {
         call(handlers?.onPermission, ev.payload);
       }),
     );
     unsubs.push(
-      await listen<{
-        requestId: number;
-        sessionId: string;
-        toolCallId?: string | null;
-        planContent?: string | null;
-        planExcerpt?: string | null;
-      }>("acp://plan-approval", (ev) => {
+      await listen<PlanApprovalEventPayload>("acp://plan-approval", (ev) => {
         call(handlers?.onPlanApproval, ev.payload);
       }),
     );

@@ -7,10 +7,15 @@ import {
   parseSessionUpdatePayload,
   parseSubagentFinished,
   parseSubagentSpawned,
-  pickAllowOption,
+  pickAllowAlwaysOption,
+  summarizeToolCall,
   toolStatus,
   toolTitle,
 } from "../lib/acpParse";
+import {
+  type PendingPermission,
+  type PendingPlan,
+} from "../lib/approvals";
 import { setAcpHandlers } from "../lib/acpListeners";
 import { findAgentNode } from "../lib/conductor";
 import { nextId } from "../lib/ids";
@@ -45,6 +50,10 @@ type Args = {
   nodesRef: React.MutableRefObject<HelmNode[]>;
   permissionModeRef: React.MutableRefObject<PermissionMode>;
   streamBufs: React.MutableRefObject<Map<string, StreamBuf>>;
+  /** Ask-mode: surface permission UI (null to clear). */
+  setPendingPermission?: (p: PendingPermission | null) => void;
+  /** Ask-mode: surface plan approval UI (null to clear). */
+  setPendingPlan?: (p: PendingPlan | null) => void;
 };
 
 /**
@@ -62,17 +71,23 @@ export function useAcpBridge({
   nodesRef,
   permissionModeRef,
   streamBufs,
+  setPendingPermission,
+  setPendingPlan,
 }: Args) {
   const setNodesRef = useRef(setNodes);
   const setEdgesRef = useRef(setEdges);
   const setConnectedRef = useRef(setConnected);
   const setAgentInfoRef = useRef(setAgentInfo);
   const setErrorRef = useRef(setError);
+  const setPendingPermissionRef = useRef(setPendingPermission);
+  const setPendingPlanRef = useRef(setPendingPlan);
   setNodesRef.current = setNodes;
   setEdgesRef.current = setEdges;
   setConnectedRef.current = setConnected;
   setAgentInfoRef.current = setAgentInfo;
   setErrorRef.current = setError;
+  setPendingPermissionRef.current = setPendingPermission;
+  setPendingPlanRef.current = setPendingPlan;
 
   const patchBySession = useRef(
     (sessionId: string, patch: (data: AgentNodeData) => AgentNodeData) => {
@@ -191,19 +206,25 @@ export function useAcpBridge({
               n.type === "subagent" &&
               (n.data as SubagentNodeData).parentNodeId === parent.id,
           ).length;
+          const col = siblings % 4;
+          const row = Math.floor(siblings / 4);
+          const typePrefix = spawned.subagentType
+            ? spawned.subagentType
+            : "sub";
+          const shortDesc = spawned.description.slice(0, 48);
           const child: HelmNode = {
             id: childNodeId,
             type: "subagent",
             position: {
-              x: parent.position.x + (siblings % 3) * 200 - 100,
-              y: parent.position.y + 200 + Math.floor(siblings / 3) * 120,
+              x: parent.position.x + col * 230 - 115,
+              y: parent.position.y + 240 + row * 150,
             },
             data: {
               kind: "subagent",
               subagentId: spawned.subagentId,
               parentSessionId: sessionId,
               parentNodeId: parent.id,
-              label: spawned.description,
+              label: `${typePrefix} · ${shortDesc}`,
               state: "working",
               lastLine: "Running…",
               subagentType: spawned.subagentType,
@@ -250,7 +271,8 @@ export function useAcpBridge({
                 type: MarkerType.ArrowClosed,
                 color: "var(--thought)",
               },
-              label: "spawned",
+              label: spawned.subagentType || "spawn",
+              labelStyle: { fill: "var(--thought)", fontSize: 10 },
             },
           ];
         });
@@ -302,7 +324,17 @@ export function useAcpBridge({
         setEdgesRef.current((prev) =>
           prev.map((e) =>
             e.target === childNodeId
-              ? { ...e, animated: false, style: { stroke: "var(--text-faint)" } }
+              ? {
+                  ...e,
+                  animated: false,
+                  style: {
+                    stroke:
+                      doneState === "failed"
+                        ? "var(--danger)"
+                        : "var(--text-faint)",
+                  },
+                  label: fin.status,
+                }
               : e,
           ),
         );
@@ -353,13 +385,19 @@ export function useAcpBridge({
       },
       onSessionUpdate: handleSessionUpdate,
       onPermission: (payload) => {
-        const sid = payload.sessionId;
+        const sid = payload.sessionId ?? null;
         const mode = permissionModeRef.current || loadPrefs().permissionMode;
+        // Prefer host-derived toolSummary (path/command); fall back to client parse.
+        const summary =
+          (typeof payload.toolSummary === "string" &&
+            payload.toolSummary.trim()) ||
+          (typeof payload.toolTitle === "string" && payload.toolTitle.trim()) ||
+          summarizeToolCall(payload.toolCall);
         if (sid) {
           patchBySession.current(sid, (data) => ({
             ...data,
             state: "needs_input",
-            lastLine: "Permission required…",
+            lastLine: `Permission: ${summary.slice(0, 80)}`,
           }));
           const parent = findAgentNode(nodesRef.current, sid);
           if (
@@ -369,18 +407,28 @@ export function useAcpBridge({
           ) {
             notifyOs(
               "Helm · needs you",
-              `${parent.data.label} needs permission`,
+              `${parent.data.label}: ${summary.slice(0, 80)}`,
             );
           }
         }
         if (mode === "auto") {
-          const optionId = pickAllowOption(payload.options ?? []);
+          const optionId = pickAllowAlwaysOption(payload.options ?? []);
           if (optionId) {
             void invoke("permission_respond", {
               requestId: payload.requestId,
               optionId,
             }).catch((e) => setErrorRef.current(String(e)));
           }
+          setPendingPermissionRef.current?.(null);
+        } else {
+          setPendingPermissionRef.current?.({
+            requestId: payload.requestId,
+            sessionId: sid,
+            options: payload.options ?? [],
+            summary,
+            toolCall: payload.toolCall,
+            receivedAt: Date.now(),
+          });
         }
       },
       onPlanApproval: (payload) => {
@@ -410,6 +458,17 @@ export function useAcpBridge({
             outcome: "approved",
             feedback: null,
           }).catch((e) => setErrorRef.current(String(e)));
+          setPendingPlanRef.current?.(null);
+        } else {
+          setPendingPlanRef.current?.({
+            requestId: payload.requestId,
+            sessionId: sid,
+            // Full plan when present; else host excerpt for the card.
+            planContent:
+              payload.planContent ?? payload.planExcerpt ?? null,
+            toolCallId: payload.toolCallId ?? null,
+            receivedAt: Date.now(),
+          });
         }
       },
     });

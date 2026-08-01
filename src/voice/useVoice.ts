@@ -92,9 +92,13 @@ export function useVoice(handlers: VoiceHandlers, enabled: boolean) {
         case "empty":
           setHud((s) => ({
             ...s,
-            lastAction: "No speech detected",
+            lastAction:
+              "No speech detected — hold longer or check mic",
             status: "idle",
           }));
+          h.onError?.(
+            "No speech detected. Hold the mic longer and speak clearly.",
+          );
           return;
         case "spawn":
           await h.onSpawn(intent.label);

@@ -15,6 +15,9 @@ type Props = {
   permissionMode: PermissionMode;
   voiceEnabled: boolean;
   voiceHud: VoiceHud;
+  /** Focused agent for voice target chip */
+  voiceTargetLabel?: string | null;
+  agentCount?: number;
   /** De-emphasize voice / advanced perms until fleet has agents */
   firstRun: boolean;
   onConnect: () => void;
@@ -41,6 +44,8 @@ export function TopBar({
   permissionMode,
   voiceEnabled,
   voiceHud,
+  voiceTargetLabel,
+  agentCount = 0,
   firstRun,
   onConnect,
   onDisconnect,
@@ -153,6 +158,8 @@ export function TopBar({
           <VoiceBar
             enabled={voiceEnabled}
             hud={voiceHud}
+            targetLabel={voiceTargetLabel}
+            agentCount={agentCount}
             onToggleEnabled={onToggleVoice}
             onMicDown={onMicDown}
             onMicUp={onMicUp}

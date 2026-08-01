@@ -3,6 +3,9 @@ import type { VoiceHud } from "../voice/useVoice";
 type Props = {
   enabled: boolean;
   hud: VoiceHud;
+  /** Focused agent label for target chip */
+  targetLabel?: string | null;
+  agentCount?: number;
   onToggleEnabled: () => void;
   onMicDown: () => void;
   onMicUp: () => void;
@@ -11,10 +14,14 @@ type Props = {
 export function VoiceBar({
   enabled,
   hud,
+  targetLabel,
+  agentCount = 0,
   onToggleEnabled,
   onMicDown,
   onMicUp,
 }: Props) {
+  const bigMic = enabled && agentCount >= 1;
+
   return (
     <div className="flex items-center gap-2">
       <button
@@ -30,16 +37,25 @@ export function VoiceBar({
         voice: {enabled ? "on" : "off"}
       </button>
 
+      {enabled && targetLabel ? (
+        <span
+          className={`voice-target-chip ${hud.listening ? "hot" : ""}`}
+          title="Voice orders target this agent (or named agent in speech)"
+        >
+          → {targetLabel}
+        </span>
+      ) : null}
+
       {enabled ? (
         <button
           type="button"
-          className={`mic-btn ${hud.listening ? "listening" : ""} ${
-            !hud.available ? "disabled" : ""
-          }`}
+          className={`mic-btn ${bigMic ? "mic-btn--lg" : ""} ${
+            hud.listening ? "listening" : ""
+          } ${!hud.available ? "disabled" : ""}`}
           title={
             hud.available
               ? hud.engine === "voxtype"
-                ? "Hold to record → Voxtype (same as Super+Ctrl+X)"
+                ? "Hold to record → Voxtype"
                 : hud.engine === "local-whisper"
                   ? "Hold to record → local whisper"
                   : "Hold to talk (Web Speech)"
@@ -60,18 +76,30 @@ export function VoiceBar({
           }}
           onTouchEnd={() => onMicUp()}
         >
-          <MicIcon listening={hud.listening} />
+          <MicIcon listening={hud.listening} large={bigMic} />
+          {bigMic ? (
+            <span className="mic-btn-label">
+              {hud.listening ? "Release" : "Hold"}
+            </span>
+          ) : null}
         </button>
       ) : null}
     </div>
   );
 }
 
-function MicIcon({ listening }: { listening: boolean }) {
+function MicIcon({
+  listening,
+  large,
+}: {
+  listening: boolean;
+  large?: boolean;
+}) {
+  const s = large ? 20 : 16;
   return (
     <svg
-      width="16"
-      height="16"
+      width={s}
+      height={s}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -94,9 +122,11 @@ function MicIcon({ listening }: { listening: boolean }) {
 export function VoiceHudStrip({
   hud,
   voiceEnabled,
+  targetLabel,
 }: {
   hud: VoiceHud;
   voiceEnabled: boolean;
+  targetLabel?: string | null;
 }) {
   if (!voiceEnabled) return null;
 
@@ -107,7 +137,7 @@ export function VoiceHudStrip({
         <span className="voice-hud-label">Voice</span>
         <span className="voice-hud-text">
           {hud.engineDetail ||
-            "No STT backend. Install: pip install -U openai-whisper  (ffmpeg already on most Arch installs)"}
+            "No STT backend. Install: pip install -U openai-whisper"}
         </span>
       </div>
     );
@@ -123,13 +153,16 @@ export function VoiceHudStrip({
         <span className="voice-hud-dot" data-listening={hud.listening} />
         <span className="voice-hud-label">
           {hud.listening
-            ? hud.engine === "voxtype" || hud.engine === "local-whisper"
-              ? "Recording"
-              : "Listening"
+            ? "Listening"
             : hud.status === "processing"
-              ? "Transcribing"
+              ? "Running"
               : "Voice"}
         </span>
+        {targetLabel ? (
+          <span className="voice-hud-target">→ {targetLabel}</span>
+        ) : (
+          <span className="voice-hud-target muted">no focus</span>
+        )}
         <span className="voice-hud-text">
           {hud.interim ||
             hud.lastAction ||
@@ -152,16 +185,24 @@ export function VoiceHudStrip({
     );
   }
 
+  // Success / idle feedback strip
   return (
-    <div className="voice-hud voice-hud-idle">
+    <div
+      className={`voice-hud ${
+        hud.lastAction && !hud.lastAction.startsWith("No speech")
+          ? "voice-hud-ok"
+          : "voice-hud-idle"
+      }`}
+    >
       <span className="voice-hud-label">Voice</span>
+      {targetLabel ? (
+        <span className="voice-hud-target">→ {targetLabel}</span>
+      ) : null}
       <span className="voice-hud-text">
         {hud.lastAction ||
           (hud.engine === "voxtype"
-            ? "Voxtype — hold Space/mic (uses your Parakeet model)"
-            : hud.engine === "local-whisper"
-              ? "Local whisper — hold Space/mic to command agents"
-              : "Hold Space or mic to command agents")}
+            ? "Hold Space/mic · “tell Scout to …”"
+            : "Hold Space/mic to command agents")}
       </span>
       <span className="voice-hud-hint mono">{hud.engine}</span>
     </div>

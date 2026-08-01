@@ -145,19 +145,10 @@ export function toolStatus(update: Record<string, unknown>): string {
   return typeof update.status === "string" ? update.status : "";
 }
 
-export function pickAllowOption(
-  options: { optionId: string; kind: string; name?: string }[],
-): string | null {
-  if (!options.length) return null;
-  const always = options.find((o) =>
-    (o.kind || "").toLowerCase().includes("allow_always"),
-  );
-  if (always) return always.optionId;
-  const once = options.find((o) => (o.kind || "").toLowerCase().includes("allow"));
-  if (once) return once.optionId;
-  const byName = options.find((o) =>
-    /allow|approve|yes/i.test((o.name || "") + o.optionId),
-  );
-  if (byName) return byName.optionId;
-  return options[0]?.optionId ?? null;
-}
+// Re-export approval pickers (single source of truth in approvals.ts)
+export {
+  pickAllowOption,
+  pickAllowAlwaysOption,
+  pickDenyOption,
+  summarizeToolCall,
+} from "./approvals";
