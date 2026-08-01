@@ -21,6 +21,8 @@ import {
   type HelmNode,
 } from "../types/helm";
 import { nextId } from "../lib/ids";
+import { grokTuiCommand } from "../lib/conductor";
+import { loadPrefs } from "../lib/prefs";
 import type { StreamBuf } from "../lib/streamBuffers";
 
 type Args = {
@@ -202,11 +204,15 @@ export function useBoardPersistence({
                 : mode === "tui"
                   ? nextId("grok-tui")
                   : undefined;
-            const command = Array.isArray(n.data.command)
-              ? (n.data.command as string[])
-              : mode === "tui"
-                ? ["grok", "--cwd", cwd, "--always-approve"]
-                : undefined;
+            // Rebuild TUI argv from prefs — never force always-approve on restore
+            const command =
+              mode === "tui"
+                ? grokTuiCommand(cwd, {
+                    alwaysApprove: loadPrefs().permissionMode === "auto",
+                  })
+                : Array.isArray(n.data.command)
+                  ? (n.data.command as string[])
+                  : undefined;
             const data = emptyAgentData(label, cwd, sessionId, {
               mode,
               shellKey,
