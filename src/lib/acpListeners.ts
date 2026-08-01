@@ -12,11 +12,23 @@ export type AcpListenerHandlers = {
   onPermission: (payload: {
     requestId: number;
     sessionId: string | null;
+    /** Raw ACP toolCall when present */
+    toolCall?: unknown;
+    toolTitle?: string | null;
+    toolKind?: string | null;
+    /** One-line UI summary (path / command / title) */
+    toolSummary?: string | null;
     options: { optionId: string; kind: string; name?: string }[];
+    raw?: unknown;
   }) => void;
   onPlanApproval: (payload: {
     requestId: number;
     sessionId: string;
+    toolCallId?: string | null;
+    /** Full plan markdown when provided */
+    planContent?: string | null;
+    /** Truncated preview for PermissionCard / dock (~2k) */
+    planExcerpt?: string | null;
   }) => void;
 };
 
@@ -54,7 +66,12 @@ async function ensureStarted() {
       await listen<{
         requestId: number;
         sessionId: string | null;
+        toolCall?: unknown;
+        toolTitle?: string | null;
+        toolKind?: string | null;
+        toolSummary?: string | null;
         options: { optionId: string; kind: string; name?: string }[];
+        raw?: unknown;
       }>("acp://permission", (ev) => {
         call(handlers?.onPermission, ev.payload);
       }),
@@ -63,6 +80,9 @@ async function ensureStarted() {
       await listen<{
         requestId: number;
         sessionId: string;
+        toolCallId?: string | null;
+        planContent?: string | null;
+        planExcerpt?: string | null;
       }>("acp://plan-approval", (ev) => {
         call(handlers?.onPlanApproval, ev.payload);
       }),

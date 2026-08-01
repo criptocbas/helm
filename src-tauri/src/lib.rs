@@ -166,9 +166,47 @@ fn plan_approval_respond(
     feedback: Option<String>,
 ) -> Result<(), String> {
     let agent = state.agent()?;
+    // Validate outcome early so Frontend gets a clear error (no silent drop).
+    let o = outcome.trim().to_lowercase();
+    if !matches!(o.as_str(), "approved" | "cancelled" | "abandoned") {
+        return Err(format!(
+            "invalid plan outcome '{outcome}' (use approved | cancelled | abandoned)"
+        ));
+    }
     agent
-        .respond_plan_approval(request_id, &outcome, feedback)
+        .respond_plan_approval(request_id, &o, feedback)
         .map_err(|e| e.to_string())
+}
+
+/// Disk hydrate: plan.md for a session (board / plan card).
+#[tauri::command]
+fn session_read_plan(session_id: String, cwd: String) -> Option<String> {
+    SharedAgent::read_plan_doc(&session_id, &cwd)
+}
+
+/// Disk hydrate: child agents under a parent session (board graph).
+#[tauri::command]
+fn session_list_subagents(
+    session_id: String,
+    cwd: String,
+) -> Vec<acp::DiskSubagentMeta> {
+    SharedAgent::list_session_subagents(&session_id, &cwd)
+}
+
+/// Optional finish text for a subagent folder (capped).
+#[tauri::command]
+fn session_read_subagent_output(
+    session_id: String,
+    cwd: String,
+    subagent_id: String,
+    max_chars: Option<usize>,
+) -> Option<String> {
+    SharedAgent::read_subagent_output(
+        &session_id,
+        &cwd,
+        &subagent_id,
+        max_chars.unwrap_or(4000),
+    )
 }
 
 #[tauri::command]
@@ -344,6 +382,9 @@ pub fn run() {
             session_cancel,
             permission_respond,
             plan_approval_respond,
+            session_read_plan,
+            session_list_subagents,
+            session_read_subagent_output,
             default_cwd,
             show_notification,
             board_list,
