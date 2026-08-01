@@ -14,19 +14,21 @@ Not mission-control chrome (that’s Grok Desk). Helm is a **board** — agents 
 
 ## Color
 
-| Token | Role | Value |
-|-------|------|--------|
-| `--bg` | Stage void | `#07090f` |
-| `--bg-elevated` | Chrome / cards | `#0d111a` |
-| `--bg-panel` | Overlays | `#121826` |
-| `--accent` | Primary signal | `#f0b429` (amber) |
-| `--success` | Done | `#3ecf8e` |
-| `--warning` / needs you | Attention | same amber family |
-| `--danger` | Failed | `#f2556e` |
-| `--thought` | Subagents / edges | `#8b9cf7` |
-| `--tool` | Working / tools | `#3db8c5` |
+Themes: **`dark`** (default) and **`light`**, toggled from the titlebar or **Ctrl+K → Theme**. Stored in `prefs.theme` (`localStorage`); applied via `data-theme` on `<html>` (`src/lib/theme.ts`).
 
-Never pure black/white.
+| Token | Role | Dark | Light |
+|-------|------|------|-------|
+| `--bg` | Stage void | `#07090f` | `#eef1f6` |
+| `--bg-elevated` | Chrome / cards | `#0d111a` | `#ffffff` |
+| `--bg-panel` | Overlays | `#121826` | `#f7f8fb` |
+| `--accent` | Primary signal | `#f0b429` | `#c99214` |
+| `--success` | Done | `#3ecf8e` | `#159a62` |
+| `--warning` / needs you | Attention | amber family | same role, tuned for paper |
+| `--danger` | Failed | `#f2556e` | `#d63d55` |
+| `--thought` | Subagents / edges | `#8b9cf7` | `#5b6fd6` |
+| `--tool` | Working / tools | `#3db8c5` | `#1f9eab` |
+
+Never pure black/white. Shadows and stage grid use `--shadow-*` / `--stage-*` tokens so both themes stay consistent.
 
 ## Typography
 

@@ -13,6 +13,7 @@ import {
   BackgroundVariant,
 } from "@xyflow/react";
 import type { HelmNode } from "../types/helm";
+import type { HelmTheme } from "../lib/theme";
 
 type Props = {
   nodes: HelmNode[];
@@ -28,11 +29,24 @@ type Props = {
   connected: boolean;
   projectCwd: string;
   connecting?: boolean;
+  /** Canvas minimap / dots track stage theme */
+  theme?: HelmTheme;
   onConnectClick: () => void;
   onPickProject: () => void;
   onSpawnClick: () => void;
   onPaletteClick: () => void;
 };
+
+function stageChrome(theme: HelmTheme | undefined) {
+  const light = theme === "light";
+  return {
+    dots: light ? "rgba(15,23,42,0.08)" : "rgba(255,255,255,0.06)",
+    mask: light ? "rgba(238,241,246,0.78)" : "rgba(7,9,15,0.7)",
+    agent: light ? "#dce3ef" : "#1a2233",
+    subagent: light ? "#d4daf0" : "#2a2f4a",
+    terminal: light ? "#cfe8eb" : "#0f2a2c",
+  };
+}
 
 /**
  * First-run guided steps when the board is empty.
@@ -58,12 +72,14 @@ export function BoardCanvas({
   connected,
   projectCwd,
   connecting,
+  theme,
   onConnectClick,
   onPickProject,
   onSpawnClick,
   onPaletteClick,
 }: Props) {
   const step = firstRunStep(connected, projectCwd);
+  const chrome = stageChrome(theme);
 
   return (
     <div className="flex-1 min-w-0 relative">
@@ -89,7 +105,7 @@ export function BoardCanvas({
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="rgba(255,255,255,0.06)"
+          color={chrome.dots}
         />
         <Controls showInteractive={false} />
         <MiniMap
@@ -97,12 +113,12 @@ export function BoardCanvas({
           zoomable
           nodeColor={(n) =>
             n.type === "subagent"
-              ? "#2a2f4a"
+              ? chrome.subagent
               : n.type === "terminal"
-                ? "#0f2a2c"
-                : "#1a2233"
+                ? chrome.terminal
+                : chrome.agent
           }
-          maskColor="rgba(7,9,15,0.7)"
+          maskColor={chrome.mask}
         />
       </ReactFlow>
 

@@ -1,5 +1,7 @@
 /** Helm UI prefs — localStorage for now; mirrors ~/.config/grok-helm intent. */
 
+import { isHelmTheme, type HelmTheme } from "./theme";
+
 export type PermissionMode = "auto" | "ask";
 
 export type HelmPrefs = {
@@ -7,6 +9,8 @@ export type HelmPrefs = {
   voiceEnabled: boolean;
   ttsCallouts: boolean;
   mcpEnabled: boolean;
+  /** Stage chrome: dark (default) or light. */
+  theme: HelmTheme;
 };
 
 const KEY = "grok-helm.prefs.v1";
@@ -17,6 +21,7 @@ const DEFAULTS: HelmPrefs = {
   voiceEnabled: false,
   ttsCallouts: false,
   mcpEnabled: false,
+  theme: "dark",
 };
 
 export function loadPrefs(): HelmPrefs {
@@ -24,7 +29,8 @@ export function loadPrefs(): HelmPrefs {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
     const parsed = JSON.parse(raw) as Partial<HelmPrefs>;
-    return { ...DEFAULTS, ...parsed };
+    const theme = isHelmTheme(parsed.theme) ? parsed.theme : DEFAULTS.theme;
+    return { ...DEFAULTS, ...parsed, theme };
   } catch {
     return { ...DEFAULTS };
   }
@@ -32,6 +38,7 @@ export function loadPrefs(): HelmPrefs {
 
 export function savePrefs(patch: Partial<HelmPrefs>): HelmPrefs {
   const next = { ...loadPrefs(), ...patch };
+  if (!isHelmTheme(next.theme)) next.theme = DEFAULTS.theme;
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {

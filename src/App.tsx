@@ -30,6 +30,11 @@ import {
   type ConductorAgent,
 } from "./lib/conductor";
 import { loadPrefs, savePrefs, type PermissionMode } from "./lib/prefs";
+import {
+  applyTheme,
+  toggleTheme,
+  type HelmTheme,
+} from "./lib/theme";
 import { createStreamBufferMap, clearStreamTurn } from "./lib/streamBuffers";
 import { useAcpBridge } from "./hooks/useAcpBridge";
 import { useBoardPersistence } from "./hooks/useBoardPersistence";
@@ -85,6 +90,7 @@ export default function App() {
   const [voiceEnabled, setVoiceEnabled] = useState(
     () => loadPrefs().voiceEnabled,
   );
+  const [theme, setTheme] = useState<HelmTheme>(() => loadPrefs().theme);
   const [maximizedNodeId, setMaximizedNodeId] = useState<string | null>(null);
   const [pendingPermission, setPendingPermission] =
     useState<PendingPermission | null>(null);
@@ -107,6 +113,10 @@ export default function App() {
   useEffect(() => {
     permissionModeRef.current = permissionMode;
   }, [permissionMode]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const selected = useMemo(
     () => nodes.find((n) => n.id === selectedId) ?? null,
@@ -810,6 +820,15 @@ export default function App() {
     });
   }, []);
 
+  const toggleUiTheme = useCallback(() => {
+    setTheme((t) => {
+      const next = toggleTheme(t);
+      savePrefs({ theme: next });
+      applyTheme(next);
+      return next;
+    });
+  }, []);
+
   const selectedBusy = selectedConductor
     ? busySessions.has(
         selectedConductor.sessionId ||
@@ -884,6 +903,15 @@ export default function App() {
         run: () => toggleVoice(),
       },
       {
+        id: "theme",
+        label:
+          theme === "dark"
+            ? "Theme: dark → switch to light"
+            : "Theme: light → switch to dark",
+        hint: "stage chrome",
+        run: () => toggleUiTheme(),
+      },
+      {
         id: "save",
         label: "Save board",
         hint: "Ctrl+S",
@@ -930,6 +958,8 @@ export default function App() {
       togglePermissionMode,
       voiceEnabled,
       toggleVoice,
+      theme,
+      toggleUiTheme,
       persistBoard,
       newBoard,
       dockOpen,
@@ -952,6 +982,7 @@ export default function App() {
           saveState={saveState}
           permissionMode={permissionMode}
           voiceEnabled={voiceEnabled}
+          theme={theme}
           voiceHud={voiceHud}
           voiceTargetLabel={selectedAgent?.label ?? null}
           agentCount={agentCount}
@@ -964,6 +995,7 @@ export default function App() {
           onOpenPalette={() => setPaletteOpen(true)}
           onTogglePermissionMode={togglePermissionMode}
           onToggleVoice={toggleVoice}
+          onToggleTheme={toggleUiTheme}
           onMicDown={() => startListening()}
           onMicUp={() => void stopListening()}
         />
@@ -1031,6 +1063,7 @@ export default function App() {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
+              theme={theme}
               onInit={(inst) => {
                 rfRef.current = inst;
               }}

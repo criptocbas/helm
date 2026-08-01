@@ -1,5 +1,6 @@
 import type { AgentInfo, GrokStatus } from "../types/board";
 import type { PermissionMode } from "../lib/prefs";
+import { themeLabel, type HelmTheme } from "../lib/theme";
 import type { VoiceHud } from "../voice/useVoice";
 import { VoiceBar } from "./VoiceBar";
 
@@ -14,6 +15,7 @@ type Props = {
   saveState: "idle" | "saving" | "saved";
   permissionMode: PermissionMode;
   voiceEnabled: boolean;
+  theme: HelmTheme;
   voiceHud: VoiceHud;
   /** Focused agent for voice target chip */
   voiceTargetLabel?: string | null;
@@ -28,6 +30,7 @@ type Props = {
   onOpenPalette: () => void;
   onTogglePermissionMode: () => void;
   onToggleVoice: () => void;
+  onToggleTheme: () => void;
   onMicDown: () => void;
   onMicUp: () => void;
 };
@@ -43,6 +46,7 @@ export function TopBar({
   saveState,
   permissionMode,
   voiceEnabled,
+  theme,
   voiceHud,
   voiceTargetLabel,
   agentCount = 0,
@@ -55,6 +59,7 @@ export function TopBar({
   onOpenPalette,
   onTogglePermissionMode,
   onToggleVoice,
+  onToggleTheme,
   onMicDown,
   onMicUp,
 }: Props) {
@@ -175,6 +180,20 @@ export function TopBar({
       )}
 
       <div className="flex-1" />
+
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        className="px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] text-[11px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]"
+        title={
+          theme === "dark"
+            ? "Switch to light theme"
+            : "Switch to dark theme"
+        }
+        aria-label={`Theme: ${themeLabel(theme)}. Click to switch.`}
+      >
+        {theme === "dark" ? "☀ Light" : "☾ Dark"}
+      </button>
 
       <span className="text-[11px] text-[var(--text-faint)]">
         {saveState === "saving"

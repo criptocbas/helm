@@ -43,7 +43,7 @@ export function CommandPalette({ open, onClose, actions }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] bg-black/50"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] bg-[color-mix(in_srgb,var(--bg)_55%,transparent)] backdrop-blur-[2px]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
