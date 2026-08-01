@@ -167,7 +167,14 @@ pub struct PermissionOption {
 pub struct PermissionRequest {
     pub request_id: u64,
     pub session_id: Option<String>,
+    /// Raw toolCall object from ACP (may be null for non-tool permissions).
     pub tool_call: Option<Value>,
+    /// Derived short title for UI (tool name / kind).
+    pub tool_title: Option<String>,
+    /// Derived kind e.g. read/edit/execute when present.
+    pub tool_kind: Option<String>,
+    /// One-line summary for PermissionCard (path, command, or title).
+    pub tool_summary: Option<String>,
     pub options: Vec<PermissionOption>,
     pub raw: Value,
 }
@@ -179,7 +186,10 @@ pub struct PlanApprovalRequest {
     pub request_id: u64,
     pub session_id: String,
     pub tool_call_id: Option<String>,
+    /// Full plan markdown when agent included it (may be large).
     pub plan_content: Option<String>,
+    /// Truncated preview for cards (~2k chars). Prefer this for dock UI.
+    pub plan_excerpt: Option<String>,
 }
 
 pub struct SharedAgent {
@@ -1335,6 +1345,46 @@ fn normalize_agent_method(method: &str, params: Value) -> (String, Value) {
     (method.to_string(), params)
 }
 
+/// Derive UI-friendly fields from an ACP toolCall value.
+fn summarize_tool_call(tool: Option<&Value>) -> (Option<String>, Option<String>, Option<String>) {
+    let Some(tool) = tool else {
+        return (None, None, None);
+    };
+    let title = tool
+        .get("title")
+        .or_else(|| tool.get("name"))
+        .or_else(|| tool.get("toolName"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let kind = tool
+        .get("kind")
+        .or_else(|| tool.get("toolKind"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let path = tool
+        .get("path")
+        .or_else(|| tool.get("filePath"))
+        .or_else(|| tool.pointer("/locations/0/path"))
+        .and_then(|v| v.as_str());
+    let cmd = tool
+        .get("command")
+        .or_else(|| tool.pointer("/input/command"))
+        .and_then(|v| v.as_str());
+    let summary = path
+        .or(cmd)
+        .map(|s| s.to_string())
+        .or_else(|| title.clone())
+        .map(|s| {
+            if s.chars().count() > 160 {
+                let t: String = s.chars().take(157).collect();
+                format!("{t}…")
+            } else {
+                s
+            }
+        });
+    (title, kind, summary)
+}
+
 fn handle_agent_request(agent: &SharedAgent, app: &AppHandle, id: u64, msg: &Value) {
     let raw_method = msg.get("method").and_then(|v| v.as_str()).unwrap_or("");
     let raw_params = msg.get("params").cloned().unwrap_or(Value::Null);
@@ -1370,28 +1420,48 @@ fn handle_agent_request(agent: &SharedAgent, app: &AppHandle, id: u64, msg: &Val
                 })
                 .unwrap_or_default();
 
-            let session_id = params
+            let mut session_id = params
                 .get("sessionId")
+                .or_else(|| params.get("session_id"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
+            // Fallback: last-used session on the shared agent (avoids unmapped cards).
+            if session_id.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
+                session_id = agent.session_id.lock().clone();
+            }
+
+            let tool_call = params
+                .get("toolCall")
+                .or_else(|| params.get("tool_call"))
+                .cloned();
+            let (tool_title, tool_kind, tool_summary) = summarize_tool_call(tool_call.as_ref());
 
             let req = PermissionRequest {
                 request_id: id,
                 session_id,
-                tool_call: params.get("toolCall").cloned(),
+                tool_call,
+                tool_title,
+                tool_kind,
+                tool_summary,
                 options,
                 raw: params,
             };
+            // Host never auto-responds — Frontend ask/auto decides.
             let _ = app.emit("acp://permission", req);
         }
         // Plan ready — client must respond with approved / cancelled / abandoned
         "x.ai/exit_plan_mode" => {
-            let session_id = params
+            let mut session_id = params
                 .get("sessionId")
                 .or_else(|| params.get("session_id"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            if session_id.is_empty() {
+                if let Some(sid) = agent.session_id.lock().clone() {
+                    session_id = sid;
+                }
+            }
             let tool_call_id = params
                 .get("toolCallId")
                 .or_else(|| params.get("tool_call_id"))
@@ -1402,13 +1472,24 @@ fn handle_agent_request(agent: &SharedAgent, app: &AppHandle, id: u64, msg: &Val
                 .or_else(|| params.get("plan_content"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
+            let plan_excerpt = plan_content.as_ref().map(|c| {
+                let max = 2000usize;
+                if c.chars().count() <= max {
+                    c.clone()
+                } else {
+                    let truncated: String = c.chars().take(max).collect();
+                    format!("{truncated}\n…")
+                }
+            });
 
             let req = PlanApprovalRequest {
                 request_id: id,
                 session_id: session_id.clone(),
                 tool_call_id,
                 plan_content: plan_content.clone(),
+                plan_excerpt: plan_excerpt.clone(),
             };
+            // Host never auto-approves plans — Frontend ask/auto decides.
             let _ = app.emit("acp://plan-approval", req);
 
             // Also surface content on the plan pane via session-update-like event
