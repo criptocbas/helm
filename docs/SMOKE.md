@@ -20,6 +20,25 @@ S7. [ ] TUI card **HUD**: status dot + label + live badge + lastLine always visi
 S8. [ ] Maximize via **Max** (text, not emoji) on tab or node; **Esc** / **Restore** returns  
 S9. [ ] Session tabs still list all agents; click focuses  
 
+## Sprint 2 — voice, ask-mode, subagent graph
+
+S2-1. [ ] Voice **on** with ≥1 agent: larger mic + **→ {focused agent}** target chip while idle/listening  
+S2-2. [ ] Hold mic / Space → HUD shows target + interim; empty speech → error (not silent)  
+S2-3. [ ] “tell Scout to list files” / “Scout, run tests” routes to named agent; HUD lastAction like `Tell Scout → …`  
+S2-4. [ ] Focus: “focus Scout” selects + pans; unknown name → clear error  
+S2-5. [ ] **perms: ask** + ACP tool permission: **Permission** card (Allow / Deny) → `permission_respond`; agent lastLine updates  
+S2-6. [ ] Plan ready (`acp://plan-approval`): **Plan** card with excerpt + Approve / Cancel  
+S2-7. [ ] **perms: auto** still auto-approves (no card)  
+S2-8. [ ] Subagent spawn places children in a grid under parent; edge label = type; finish edge label = status  
+S2-9. [ ] Subagent card shows type pill + Running/Done/Failed  
+
+### Flow notes (screenshot-level)
+
+- **Voice:** TopBar target chip → hold large mic → strip shows “Listening · → Agent · interim” → release → “Tell X → …” feedback.  
+- **Ask permission:** Agent needs_input + Needs-you chip → approval dock appears under tabs with tool title → Allow/Deny.  
+- **Plan:** Same dock with plan excerpt → Approve plan.  
+- **Subagents:** Parent lastLine “Spawned: …”; violet child nodes in rows; animated edge until done.
+
 ## Phase 0 — fleet basics
 
 1. [ ] Status shows grok version

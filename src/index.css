@@ -615,6 +615,40 @@ body,
   cursor: not-allowed;
 }
 
+.mic-btn--lg {
+  width: auto;
+  min-width: 72px;
+  height: 36px;
+  padding: 0 12px;
+  gap: 6px;
+  border-radius: 999px;
+}
+
+.mic-btn-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.voice-target-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-target-chip.hot {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  animation: helm-pulse 1.2s ease-in-out infinite;
+}
+
 .voice-hud {
   position: absolute;
   left: 50%;
@@ -644,6 +678,26 @@ body,
 
 .voice-hud-idle {
   opacity: 0.9;
+}
+
+.voice-hud-ok {
+  border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+}
+
+.voice-hud-target {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-hud-target.muted {
+  color: var(--text-faint);
+  font-weight: 500;
 }
 
 .voice-hud-dot {
@@ -688,6 +742,136 @@ body,
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
     0 0 28px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* Ask-mode permission / plan cards */
+.approval-dock {
+  scrollbar-width: thin;
+}
+
+.approval-card {
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--warning) 6%, var(--bg-elevated));
+  padding: 10px 12px;
+}
+
+.approval-card--plan {
+  border-color: color-mix(in srgb, var(--thought) 40%, var(--border));
+  background: color-mix(in srgb, var(--thought) 6%, var(--bg-elevated));
+}
+
+.approval-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.approval-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+}
+
+.approval-badge--plan {
+  background: color-mix(in srgb, var(--thought) 22%, transparent);
+  color: var(--thought);
+}
+
+.approval-agent {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.approval-summary {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.approval-hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.approval-plan-body {
+  margin: 0 0 10px;
+  max-height: 140px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.approval-btn {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.approval-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.approval-btn--allow {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.approval-btn--deny:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.subagent-state-pill {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
 }
 
 

@@ -89,15 +89,27 @@ export function parseVoiceIntent(raw: string): VoiceIntent {
   }
 
   // tell / ask / order Name to …
+  // also: "tell the agent named Scout to …", "have Scout run tests"
   {
-    const m = text.match(
-      /^(?:tell|ask|order|have|get)\s+(.+?)\s+to\s+(.+)$/,
+    const tellTo = text.match(
+      /^(?:tell|ask|order|instruct)\s+(?:the\s+)?(?:agent\s+)?(?:named\s+|called\s+)?(.+?)\s+to\s+(.+)$/,
     );
-    if (m && m[1] && m[2]) {
+    if (tellTo && tellTo[1] && tellTo[2]) {
       return {
         type: "tell",
-        name: m[1].replace(/^(agent)\s+/i, "").trim(),
-        message: m[2].trim(),
+        name: cleanAgentName(tellTo[1]),
+        message: tellTo[2].trim(),
+      };
+    }
+    // have/get NAME VERB …  (no "to")
+    const have = text.match(
+      /^(?:have|get)\s+(?:the\s+)?(?:agent\s+)?(?:named\s+|called\s+)?([a-z0-9][a-z0-9 _-]{0,40}?)\s+((?:run|do|fix|build|check|list|open|write|read|create|deploy|test|implement|refactor|search|find|start|stop)\b.+)$/,
+    );
+    if (have && have[1] && have[2]) {
+      return {
+        type: "tell",
+        name: cleanAgentName(have[1]),
+        message: have[2].trim(),
       };
     }
   }
@@ -117,6 +129,13 @@ export function parseVoiceIntent(raw: string): VoiceIntent {
   return { type: "prompt", text: raw.trim() };
 }
 
+function cleanAgentName(s: string): string {
+  return s
+    .replace(/^(agent)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function titleCase(s: string): string {
   return s
     .split(/\s+/)
@@ -124,22 +143,22 @@ function titleCase(s: string): string {
     .join(" ");
 }
 
-/** Human-readable summary of intent for HUD. */
+/** Human-readable summary of intent for HUD / toast. */
 export function describeIntent(intent: VoiceIntent): string {
   switch (intent.type) {
     case "empty":
-      return "No speech detected";
+      return "No speech detected — hold longer or speak louder";
     case "spawn":
-      return intent.label ? `Spawn agent “${intent.label}”` : "Spawn agent";
+      return intent.label ? `Spawn “${intent.label}”` : "Spawn agent";
     case "stop":
       return "Stop focused agent";
     case "stop_all":
       return "Stop all agents";
     case "focus":
-      return `Focus “${intent.name}”`;
+      return `Focus → ${intent.name}`;
     case "tell":
-      return `Tell ${intent.name}: ${intent.message.slice(0, 60)}`;
+      return `Tell ${titleCase(intent.name)} → ${intent.message.slice(0, 72)}`;
     case "prompt":
-      return `Prompt: ${intent.text.slice(0, 80)}`;
+      return `Prompt → ${intent.text.slice(0, 80)}`;
   }
 }

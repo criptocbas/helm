@@ -5,19 +5,28 @@
  */
 
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { PermissionOption } from "./approvals";
+
+export type PermissionEventPayload = {
+  requestId: number;
+  sessionId: string | null;
+  options: PermissionOption[];
+  toolCall?: unknown;
+  raw?: unknown;
+};
+
+export type PlanApprovalEventPayload = {
+  requestId: number;
+  sessionId: string;
+  toolCallId?: string | null;
+  planContent?: string | null;
+};
 
 export type AcpListenerHandlers = {
   onStatus: (payload: { running?: boolean }) => void;
   onSessionUpdate: (payload: unknown) => void;
-  onPermission: (payload: {
-    requestId: number;
-    sessionId: string | null;
-    options: { optionId: string; kind: string; name?: string }[];
-  }) => void;
-  onPlanApproval: (payload: {
-    requestId: number;
-    sessionId: string;
-  }) => void;
+  onPermission: (payload: PermissionEventPayload) => void;
+  onPlanApproval: (payload: PlanApprovalEventPayload) => void;
 };
 
 let handlers: AcpListenerHandlers | null = null;
@@ -51,19 +60,12 @@ async function ensureStarted() {
       }),
     );
     unsubs.push(
-      await listen<{
-        requestId: number;
-        sessionId: string | null;
-        options: { optionId: string; kind: string; name?: string }[];
-      }>("acp://permission", (ev) => {
+      await listen<PermissionEventPayload>("acp://permission", (ev) => {
         call(handlers?.onPermission, ev.payload);
       }),
     );
     unsubs.push(
-      await listen<{
-        requestId: number;
-        sessionId: string;
-      }>("acp://plan-approval", (ev) => {
+      await listen<PlanApprovalEventPayload>("acp://plan-approval", (ev) => {
         call(handlers?.onPlanApproval, ev.payload);
       }),
     );
