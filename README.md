@@ -65,6 +65,16 @@ Smoke checklist: [`docs/SMOKE.md`](./docs/SMOKE.md)
 4. **Visible > background** — workers live on the canvas  
 5. **Reliability before soul** — stop, stall, reconnect first  
 
+## Host reliability (Sprint 1)
+
+| Control | Default |
+|---------|---------|
+| Max live PTYs (TUI + shells) | **8** (`HELM_MAX_PTYS` override, 1–64) |
+| Disconnect / app exit | Reaps **all** PTYs + ACP process group |
+| Board restore (TUI) | **Honest** — dead PTY ≠ reattach; Respawn required |
+| Permission | Default **ask** — `--always-approve` only when prefs auto |
+| Stall signal | `pty://stall` after ~10 min no activity → `needs_attention` |
+
 ## License
 
 TBD.

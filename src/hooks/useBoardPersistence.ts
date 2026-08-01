@@ -202,17 +202,24 @@ export function useBoardPersistence({
                 : mode === "tui"
                   ? nextId("grok-tui")
                   : undefined;
-            const command = Array.isArray(n.data.command)
+            // Strip always-approve from restored argv — re-add only when spawning with auto prefs.
+            const rawCommand = Array.isArray(n.data.command)
               ? (n.data.command as string[])
               : mode === "tui"
-                ? ["grok", "--cwd", cwd, "--always-approve"]
+                ? ["grok", "--cwd", cwd]
                 : undefined;
+            const command = rawCommand?.filter((a) => a !== "--always-approve");
+            // TUI honesty: app restart kills PTYs. Do not pretend reattach.
+            const tuiRestored = mode === "tui";
             const data = emptyAgentData(label, cwd, sessionId, {
               mode,
               shellKey,
               command,
-              lastLine,
-              state: mode === "tui" ? "working" : "disconnected",
+              lastLine: tuiRestored
+                ? "Session ended — respawn to continue"
+                : lastLine,
+              state: "disconnected",
+              missing: tuiRestored ? true : undefined,
             });
             return {
               id: n.id,

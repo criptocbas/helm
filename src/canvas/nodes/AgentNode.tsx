@@ -92,6 +92,7 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
               cwd={agent.cwd}
               active={!!selected}
               command={agent.command ?? null}
+              autoSpawn={!agent.missing}
             />
           </div>
         )}

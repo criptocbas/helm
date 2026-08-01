@@ -7,12 +7,13 @@ mod stt;
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::thread;
 
 use acp::{AgentInfo, GrokStatus, SessionInfo, SharedAgent};
 use board::{BoardListItem, SavedBoard};
 use parking_lot::Mutex;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 
 struct AppState {
     agent: Mutex<Option<Arc<SharedAgent>>>,
@@ -77,10 +78,16 @@ async fn agent_start(app: AppHandle, state: State<'_, AppState>) -> Result<Agent
 }
 
 #[tauri::command]
-fn agent_stop(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+fn agent_stop(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    pty_state: State<'_, pty::PtyState>,
+) -> Result<(), String> {
     if let Some(agent) = state.agent.lock().take() {
         agent.kill();
     }
+    // Disconnect reaps embedded TUIs / shells so we leave no zombies.
+    let _ = pty::kill_all(&pty_state);
     let _ = app.emit(
         "acp://status",
         serde_json::json!({ "running": false, "reason": "stopped" }),
@@ -261,11 +268,21 @@ fn pty_kill_session(
 }
 
 #[tauri::command]
+fn pty_kill_all(state: State<'_, pty::PtyState>) -> Result<(), String> {
+    pty::kill_all(&state)
+}
+
+#[tauri::command]
 fn pty_list(
     state: State<'_, pty::PtyState>,
     session_id: Option<String>,
 ) -> Vec<pty::PtyInfo> {
     pty::list(&state, session_id)
+}
+
+#[tauri::command]
+fn pty_live_count(state: State<'_, pty::PtyState>) -> usize {
+    pty::live_count(&state)
 }
 
 // --- Local STT ---
@@ -280,7 +297,6 @@ fn stt_transcribe(audio_b64: String, mime: String) -> Result<String, String> {
     stt::transcribe_base64(&audio_b64, &mime)
 }
 
-/// Voxtype daemon PTT (system mic — no webview permission needed).
 #[tauri::command]
 fn voxtype_ptt_start() -> Result<(), String> {
     stt::voxtype_ptt_start()
@@ -294,6 +310,18 @@ fn voxtype_ptt_stop() -> Result<String, String> {
 #[tauri::command]
 fn voxtype_ptt_cancel() -> Result<(), String> {
     stt::voxtype_ptt_cancel()
+}
+
+fn start_stall_watcher(app: AppHandle) {
+    thread::Builder::new()
+        .name("helm-pty-stall".into())
+        .spawn(move || loop {
+            thread::sleep(pty::stall_poll_interval());
+            if let Some(pty_state) = app.try_state::<pty::PtyState>() {
+                pty::poll_stalls(&app, pty_state.inner());
+            }
+        })
+        .ok();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -330,13 +358,35 @@ pub fn run() {
             pty_resize,
             pty_kill,
             pty_kill_session,
+            pty_kill_all,
             pty_list,
+            pty_live_count,
             stt_status,
             stt_transcribe,
             voxtype_ptt_start,
             voxtype_ptt_stop,
             voxtype_ptt_cancel,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Helm");
+        .setup(|app| {
+            start_stall_watcher(app.handle().clone());
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building Helm")
+        .run(|app_handle, event| {
+            // App exit: reap all PTYs so orphaned grok/shell processes die.
+            if matches!(
+                event,
+                RunEvent::Exit | RunEvent::ExitRequested { .. }
+            ) {
+                if let Some(pty_state) = app_handle.try_state::<pty::PtyState>() {
+                    let _ = pty::kill_all(pty_state.inner());
+                }
+                if let Some(st) = app_handle.try_state::<AppState>() {
+                    if let Some(agent) = st.agent.lock().take() {
+                        agent.kill();
+                    }
+                }
+            }
+        });
 }
