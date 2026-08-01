@@ -28,6 +28,7 @@ type PtyInfo = {
   sessionId: string;
   cwd: string;
   alive: boolean;
+  idleSecs?: number | null;
 };
 
 function b64ToUint8(b64: string): Uint8Array {
@@ -44,11 +45,18 @@ type Props = {
   active: boolean;
   /**
    * Optional argv. When omitted, spawns interactive shell.
-   * For full Grok TUI: `["grok", "--cwd", cwd, "--always-approve"]`
+   * For full Grok TUI: build via `grokTuiCommand` (always-approve only when auto).
    */
   command?: string[] | null;
+  /**
+   * When false, only reattach a live PTY — do not spawn a new process.
+   * Used after board restore (PTYs die with the app).
+   */
+  autoSpawn?: boolean;
   /** Called when the PTY process exits */
   onExit?: (code: number | null) => void;
+  /** Called after user-initiated respawn succeeds */
+  onRespawned?: () => void;
 };
 
 /**
@@ -59,16 +67,20 @@ export function TerminalHost({
   cwd,
   active,
   command,
+  autoSpawn = true,
   onExit,
+  onRespawned,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const ptyIdRef = useRef<string | null>(null);
   const [status, setStatus] = useState<
-    "starting" | "running" | "exited" | "error"
+    "starting" | "running" | "exited" | "error" | "ended"
   >("starting");
   const [error, setError] = useState<string | null>(null);
+  const [forceSpawn, setForceSpawn] = useState(false);
+  const [bootKey, setBootKey] = useState(0);
 
   const fit = useCallback(() => {
     const f = fitRef.current;
@@ -93,7 +105,7 @@ export function TerminalHost({
     if (!hostRef.current || termRef.current) return;
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: command?.length ? 12 : 12,
+      fontSize: 12,
       fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
       theme: {
         background: "#0a0e16",
@@ -132,6 +144,7 @@ export function TerminalHost({
   useEffect(() => {
     let cancelled = false;
     const unsubs: Array<() => void> = [];
+    const allowSpawn = autoSpawn || forceSpawn;
 
     void (async () => {
       setStatus("starting");
@@ -147,6 +160,17 @@ export function TerminalHost({
         let ptyId: string;
         if (existing) {
           ptyId = existing.ptyId;
+        } else if (!allowSpawn) {
+          // Honest restore: no live PTY after app restart — do not fake reattach.
+          if (!cancelled) {
+            setStatus("ended");
+            setError("Session ended — respawn to continue");
+            termRef.current?.writeln(
+              "\r\n\x1b[90m[no live PTY — session ended with the previous app run]\x1b[0m",
+            );
+            onExit?.(null);
+          }
+          return;
         } else {
           const spawned = await invoke<PtySpawnResult>("pty_spawn", {
             sessionId: shellKey,
@@ -156,10 +180,12 @@ export function TerminalHost({
             command: command ?? null,
           });
           ptyId = spawned.ptyId;
+          if (forceSpawn) onRespawned?.();
         }
         if (cancelled) return;
         ptyIdRef.current = ptyId;
         setStatus("running");
+        setForceSpawn(false);
         fit();
       } catch (e) {
         if (!cancelled) {
@@ -194,7 +220,17 @@ export function TerminalHost({
       cancelled = true;
       for (const u of unsubs) u();
     };
-  }, [shellKey, cwd, command, fit, onExit]);
+  }, [
+    shellKey,
+    cwd,
+    command,
+    fit,
+    onExit,
+    onRespawned,
+    autoSpawn,
+    forceSpawn,
+    bootKey,
+  ]);
 
   useEffect(() => {
     if (active) {
@@ -203,6 +239,13 @@ export function TerminalHost({
     }
   }, [active, fit]);
 
+  const respawn = () => {
+    setForceSpawn(true);
+    setBootKey((k) => k + 1);
+    setError(null);
+    setStatus("starting");
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--border)] text-[10px] text-[var(--text-faint)]">
@@ -210,8 +253,20 @@ export function TerminalHost({
         <span className="mono truncate flex-1">
           {command?.length ? command.join(" ") : cwd}
         </span>
+        {status === "ended" || status === "exited" || status === "error" ? (
+          <button
+            type="button"
+            className="px-2 py-0.5 rounded border border-[var(--border)] text-[var(--accent)] hover:bg-[var(--surface-2)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              respawn();
+            }}
+          >
+            Respawn
+          </button>
+        ) : null}
         {error ? (
-          <span className="text-[var(--danger)] truncate">{error}</span>
+          <span className="text-[var(--danger)] truncate max-w-[40%]">{error}</span>
         ) : null}
       </div>
       <div

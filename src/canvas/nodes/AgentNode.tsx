@@ -32,7 +32,8 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
   if (d.kind !== "agent") return null;
   const agent = d as AgentNodeData;
   const isTui = agent.mode === "tui" && !!agent.shellKey;
-  const { maximizedNodeId, maximizeNode, minimizeNode } = useHelmUi();
+  const { maximizedNodeId, maximizeNode, minimizeNode, markTuiLive } =
+    useHelmUi();
   const isMaximized = maximizedNodeId === id;
 
   if (isTui) {
@@ -108,6 +109,8 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
               cwd={agent.cwd}
               active={!!selected}
               command={agent.command ?? null}
+              autoSpawn={!agent.missing}
+              onRespawned={() => markTuiLive(id)}
             />
           </div>
         )}

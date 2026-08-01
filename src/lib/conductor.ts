@@ -91,7 +91,8 @@ export function grokTuiCommand(
   opts?: { alwaysApprove?: boolean; initialPrompt?: string },
 ): string[] {
   const cmd = ["grok", "--cwd", cwd];
-  // Safe default: no --always-approve unless explicitly auto/dogfood
+  // Only inject when caller explicitly opts in (prefs permissionMode === "auto").
+  // Default ask must NOT pass --always-approve.
   if (opts?.alwaysApprove === true) {
     cmd.push("--always-approve");
   }

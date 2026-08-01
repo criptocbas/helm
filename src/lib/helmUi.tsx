@@ -4,12 +4,15 @@ type HelmUiValue = {
   maximizedNodeId: string | null;
   maximizeNode: (nodeId: string) => void;
   minimizeNode: () => void;
+  /** After user Respawn on a restored TUI — clear missing so autoSpawn works again */
+  markTuiLive: (nodeId: string) => void;
 };
 
 const HelmUiContext = createContext<HelmUiValue>({
   maximizedNodeId: null,
   maximizeNode: () => {},
   minimizeNode: () => {},
+  markTuiLive: () => {},
 });
 
 export function HelmUiProvider({

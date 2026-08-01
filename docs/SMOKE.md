@@ -66,11 +66,20 @@ S9. [ ] Session tabs still list all agents; click focuses
 35. [ ] Esc cancels listening (when not in maximized TUI)
 36. [ ] If STT unsupported, clear error (not a crash)
 
+## Sprint 1 host reliability (Onchain)
+
+41. [ ] Soft PTY cap: spawn agents until limit (default **8** live) → clear error; stop one → spawn again. Override: `HELM_MAX_PTYS`.
+42. [ ] **Disconnect** or quit app → no leftover `grok`/shell processes (`pgrep -a grok` clean after exit).
+43. [ ] Board restore after restart: TUI cards show **disconnected** + “Session ended — respawn to continue”; **Respawn** starts a new process (does not pretend reattach).
+44. [ ] Permission default **ask** — new install does **not** pass `--always-approve` unless user opts into auto/dogfood.
+45. [ ] (Optional) After ~10 min with no PTY output, card may flip to `needs_attention` + OS notify (`pty://stall`).
+
 ## Known limits
 
 - Subagents not persisted across restarts (live only)
 - Permission **default is ask**; auto / always-approve is opt-in (dogfood)
 - No browser / preview nodes yet
 - Voice uses Web Speech API (webview-dependent); no local whisper yet
-- Transcript does not full-reload history from disk on reattach
-- Host PTY caps / stall detection: Onchain Sprint 1 lane
+- Transcript does not full-reload history from disk on ACP reattach
+- TUI scrollback still lost on maximize remount (PTY stays alive)
+- Stall event is idle-time based (can fire on quiet waiting TUIs)

@@ -172,6 +172,27 @@ export default function App() {
     setMaximizedNodeId(null);
   }, []);
 
+  const markTuiLive = useCallback(
+    (nodeId: string) => {
+      setNodes((prev) =>
+        prev.map((x) =>
+          x.id === nodeId && isAgentData(x.data)
+            ? {
+                ...x,
+                data: {
+                  ...x.data,
+                  missing: false,
+                  state: "working",
+                  lastLine: "TUI respawned — session live.",
+                },
+              }
+            : x,
+        ),
+      );
+    },
+    [setNodes],
+  );
+
   // Drop maximize if the node was deleted
   useEffect(() => {
     if (maximizedNodeId && !nodes.some((n) => n.id === maximizedNodeId)) {
@@ -184,8 +205,9 @@ export default function App() {
       maximizedNodeId,
       maximizeNode,
       minimizeNode,
+      markTuiLive,
     }),
-    [maximizedNodeId, maximizeNode, minimizeNode],
+    [maximizedNodeId, maximizeNode, minimizeNode, markTuiLive],
   );
 
   const flowCenter = useCallback(() => {

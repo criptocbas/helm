@@ -1,5 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { MarkerType, type Edge } from "@xyflow/react";
 import {
   extractText,
@@ -413,6 +414,42 @@ export function useAcpBridge({
       },
     });
 
-    return clear;
+    // Host health: long quiet PTY → needs_attention (Sprint 1)
+    let cancelled = false;
+    const stallUnsubs: Array<() => void> = [];
+    void listen<{
+      sessionId: string;
+      ptyId: string;
+      idleSecs: number;
+      message: string;
+    }>("pty://stall", (ev) => {
+      if (cancelled) return;
+      const sid = ev.payload.sessionId;
+      setNodesRef.current((prev) =>
+        prev.map((n) => {
+          if (n.type !== "agent" || !isAgentData(n.data)) return n;
+          if (n.data.shellKey !== sid) return n;
+          if (n.data.state === "needs_input" || n.data.state === "failed") return n;
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              state: "needs_attention" as AgentNodeState,
+              lastLine: ev.payload.message,
+            },
+          };
+        }),
+      );
+      notifyOs("Helm · quiet agent", ev.payload.message.slice(0, 120));
+    }).then((u) => {
+      if (!cancelled) stallUnsubs.push(u);
+      else u();
+    });
+
+    return () => {
+      cancelled = true;
+      clear();
+      for (const u of stallUnsubs) u();
+    };
   }, [nodesRef, permissionModeRef, selectedIdRef, streamBufs]);
 }
